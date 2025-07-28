@@ -78,9 +78,19 @@ export default function Layout({ children }: LayoutProps) {
           </nav>
           <div className="border-t border-gray-200 p-4">
             <div className="flex items-center space-x-3 mb-3">
-              <div className="w-8 h-8 bg-blue-900 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
-              </div>
+              {user?.profile_picture_url ? (
+                <img
+                  src={user.profile_picture_url}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-blue-900 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+              )}
               <div>
                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>
                 <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
@@ -132,9 +142,19 @@ export default function Layout({ children }: LayoutProps) {
           </nav>
           <div className="border-t border-gray-200 p-4">
             <div className="flex items-center space-x-3 mb-3">
-              <div className="w-8 h-8 bg-blue-900 rounded-full flex items-center justify-center">
-                <User className="w-4 h-4 text-white" />
-              </div>
+              {user?.profile_picture_url ? (
+                <img
+                  src={user.profile_picture_url}
+                  alt="Profile"
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-8 h-8 bg-blue-900 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-medium">
+                    {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+              )}
               <div>
                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>
                 <p className="text-xs text-gray-500 capitalize">{user?.role}</p>

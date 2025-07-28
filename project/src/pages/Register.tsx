@@ -1,13 +1,13 @@
 import React, { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Car, User, Phone, Lock, AlertCircle, CheckCircle } from 'lucide-react'
+import { Car, User, Phone, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
 
 export default function Register() {
   const { user, signUp, loading } = useAuth()
   const [formData, setFormData] = useState({
     name: '',
-    phone: '',
+    email: '',
     waNumber: '',
     password: '',
     confirmPassword: ''
@@ -37,7 +37,7 @@ export default function Register() {
       return
     }
 
-    const result = await signUp(formData.name, formData.phone, formData.waNumber, formData.password)
+    const result = await signUp(formData.name, formData.email, formData.waNumber, formData.password)
     if (result.error) {
       setError(result.error)
     } else {
@@ -55,7 +55,7 @@ export default function Register() {
           </div>
           <h2 className="text-2xl font-semibold text-gray-900 mb-4">Registrasi Berhasil!</h2>
           <p className="text-gray-600 mb-6">
-            Akun Anda telah berhasil dibuat. Silakan login untuk melanjutkan.
+            Akun Anda telah berhasil dibuat. Silakan cek email untuk verifikasi, lalu login untuk melanjutkan.
           </p>
           <Link
             to="/login"
@@ -113,17 +113,17 @@ export default function Register() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nomor Telepon
+              Email
             </label>
             <div className="relative">
-              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
-                type="tel"
+                type="email"
                 required
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                placeholder="08123456789"
+                placeholder="nama@email.com"
               />
             </div>
           </div>

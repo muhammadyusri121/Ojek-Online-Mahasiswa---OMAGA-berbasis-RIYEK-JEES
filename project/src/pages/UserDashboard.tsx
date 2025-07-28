@@ -140,12 +140,22 @@ export default function UserDashboard() {
                 {drivers.map((driver) => (
                   <div key={driver.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-900 rounded-full flex items-center justify-center">
-                        <User className="w-5 h-5 text-white" />
-                      </div>
+                      {driver.user?.profile_picture_url ? (
+                        <img
+                          src={driver.user.profile_picture_url}
+                          alt="Profile"
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 bg-blue-900 rounded-full flex items-center justify-center">
+                          <span className="text-white font-medium">
+                            {driver.user?.name?.charAt(0)?.toUpperCase() || 'D'}
+                          </span>
+                        </div>
+                      )}
                       <div>
                         <p className="font-medium text-gray-900">{driver.user?.name}</p>
-                        <p className="text-sm text-gray-500">{driver.user?.phone}</p>
+                        <p className="text-sm text-gray-500">{driver.user?.wa_number}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-2">

@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { Car, Phone, Lock, AlertCircle } from 'lucide-react'
+import { Car, Mail, Lock, AlertCircle } from 'lucide-react'
 
 export default function Login() {
   const { user, signIn, loading } = useAuth()
-  const [formData, setFormData] = useState({ phone: '', password: '' })
+  const [formData, setFormData] = useState({ email: '', password: '' })
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
 
@@ -18,9 +18,9 @@ export default function Login() {
     setIsLoading(true)
     setError('')
 
-    const result = await signIn(formData.phone, formData.password)
+    const result = await signIn(formData.email, formData.password)
     if (result.error) {
-      setError('Nomor telepon atau password salah')
+      setError('Email atau password salah')
     }
     setIsLoading(false)
   }
@@ -53,17 +53,17 @@ export default function Login() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Nomor Telepon
+              Email
             </label>
             <div className="relative">
-              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
-                type="tel"
+                type="email"
                 required
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                placeholder="08123456789"
+                placeholder="nama@email.com"
               />
             </div>
           </div>

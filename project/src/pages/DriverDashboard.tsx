@@ -10,7 +10,8 @@ import {
   CheckCircle,
   AlertCircle,
   Power,
-  MessageCircle
+  MessageCircle,
+  Phone
 } from 'lucide-react'
 
 export default function DriverDashboard() {
@@ -291,6 +292,10 @@ export default function DriverDashboard() {
                         <User className="w-3 h-3" />
                         <span><strong>Pemesan:</strong> {order.user?.name}</span>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <Phone className="w-3 h-3" />
+                        <span><strong>WA:</strong> {order.user?.wa_number}</span>
+                      </div>
                     </div>
 
                     {order.notes && (
@@ -371,6 +376,10 @@ export default function DriverDashboard() {
                       <div className="flex items-center space-x-2">
                         <User className="w-3 h-3" />
                         <span><strong>Pemesan:</strong> {order.user?.name}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Phone className="w-3 h-3" />
+                        <span><strong>WA:</strong> {order.user?.wa_number}</span>
                       </div>
                     </div>
 
