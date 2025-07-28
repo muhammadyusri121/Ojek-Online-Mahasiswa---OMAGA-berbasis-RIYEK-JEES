@@ -23,7 +23,8 @@ export interface Driver {
   status: 'online' | 'offline'
   created_at: string
   updated_at: string
-  user?: User
+  // PERBAIKAN: Pastikan 'user' adalah satu objek User, bukan array.
+  users: User 
 }
 
 export interface Order {

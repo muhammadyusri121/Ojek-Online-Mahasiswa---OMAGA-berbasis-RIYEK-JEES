@@ -19,9 +19,12 @@ export default function Login() {
     setError('')
 
     const result = await signIn(formData.email, formData.password)
+    
+    // PERBAIKAN: Tampilkan pesan error yang sebenarnya dari Supabase
     if (result.error) {
-      setError('Email atau password salah')
+      setError(result.error)
     }
+    
     setIsLoading(false)
   }
 

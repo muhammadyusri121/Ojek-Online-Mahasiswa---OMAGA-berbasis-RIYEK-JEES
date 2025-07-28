@@ -1,147 +1,84 @@
-import React, { useEffect, useState } from 'react'
-import { supabase, type User, type Order } from '../lib/supabase'
-import { 
-  Users, 
-  Car, 
-  Package, 
-  Settings,
-  Download,
-  UserCheck,
-  UserX,
-  BarChart3,
-  TrendingUp,
-  Clock,
-  CheckCircle
-} from 'lucide-react'
+// Ganti isi file src/pages/AdminDashboard.tsx dengan kode ini
+
+import React, { useEffect, useState, useCallback } from 'react';
+import { supabase, type User, type Order } from '../lib/supabase';
+import { Users, Car, Package, Download, UserCheck, UserX, BarChart3, Clock, CheckCircle } from 'lucide-react';
+
+// Tipe untuk data statistik admin
+interface AdminDashboardStats {
+    total_users: number;
+    total_drivers: number;
+    active_drivers: number;
+    total_orders: number;
+    completed_orders: number;
+    pending_orders: number;
+}
 
 export default function AdminDashboard() {
-  const [users, setUsers] = useState<User[]>([])
-  const [orders, setOrders] = useState<Order[]>([])
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalDrivers: 0,
-    activeDrivers: 0,
-    totalOrders: 0,
-    completedOrders: 0,
-    pendingOrders: 0
-  })
-  const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'orders'>('overview')
+  const [users, setUsers] = useState<User[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [stats, setStats] = useState<AdminDashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'orders'>('overview');
+
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  }, []);
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.from('orders').select(`*, user:users(*), driver:drivers(*, user:users(*))`).order('created_at', { ascending: false });
+      if (error) throw error;
+      setOrders(data || []);
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  }, []);
+
+  const fetchOverview = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data: statsData, error: statsError } = await supabase.rpc('get_admin_dashboard_overview').single<AdminDashboardStats>();
+      if (statsError) throw statsError;
+      setStats(statsData);
+
+      const { data: recentOrders, error: ordersError } = await supabase.from('orders').select(`*, user:users(name)`).order('created_at', { ascending: false }).limit(5);
+      if (ordersError) throw ordersError;
+      setOrders(recentOrders as Order[] || []); // Cast as Order[]
+    } catch (e) { console.error(e); } finally { setLoading(false); }
+  }, []);
 
   useEffect(() => {
-    fetchData()
-  }, [])
-
-  async function fetchData() {
-    try {
-      // Fetch users
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (usersError) throw usersError
-      setUsers(usersData || [])
-
-      // Fetch orders with user data
-      const { data: ordersData, error: ordersError } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          user:users(*),
-          driver:drivers(
-            *,
-            user:users(*)
-          )
-        `)
-        .order('created_at', { ascending: false })
-
-      if (ordersError) throw ordersError
-      setOrders(ordersData || [])
-
-      // Calculate stats
-      const totalUsers = usersData?.length || 0
-      const totalDrivers = usersData?.filter(u => u.role === 'driver').length || 0
-      
-      const { count: activeDrivers } = await supabase
-        .from('drivers')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'online')
-
-      const totalOrders = ordersData?.length || 0
-      const completedOrders = ordersData?.filter(o => o.status === 'completed').length || 0
-      const pendingOrders = ordersData?.filter(o => ['pending', 'accepted', 'in_progress'].includes(o.status)).length || 0
-
-      setStats({
-        totalUsers,
-        totalDrivers,
-        activeDrivers: activeDrivers || 0,
-        totalOrders,
-        completedOrders,
-        pendingOrders
-      })
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
-    }
+    if (activeTab === 'overview') fetchOverview();
+    else if (activeTab === 'users') fetchUsers();
+    else if (activeTab === 'orders') fetchOrders();
+  }, [activeTab, fetchOverview, fetchUsers, fetchOrders]);
+  
+  const refreshCurrentTab = () => {
+      if (activeTab === 'users') fetchUsers();
+      else fetchOverview();
   }
 
   async function promoteToDriver(userId: string) {
-    try {
-      const { error: userError } = await supabase
-        .from('users')
-        .update({ role: 'driver' })
-        .eq('id', userId)
-
-      if (userError) throw userError
-
-      // Create driver record
-      const { error: driverError } = await supabase
-        .from('drivers')
-        .insert({
-          user_id: userId,
-          status: 'offline'
-        })
-
-      if (driverError && driverError.code !== '23505') { // Ignore duplicate key error
-        throw driverError
-      }
-
-      await fetchData()
-    } catch (error) {
-      console.error('Error promoting to driver:', error)
-    }
+    const { error } = await supabase.from('users').update({ role: 'driver' }).eq('id', userId);
+    if (error) console.error(error); else refreshCurrentTab();
   }
 
   async function demoteFromDriver(userId: string) {
-    try {
-      const { error: userError } = await supabase
-        .from('users')
-        .update({ role: 'pengguna' })
-        .eq('id', userId)
-
-      if (userError) throw userError
-
-      // Remove driver record
-      const { error: driverError } = await supabase
-        .from('drivers')
-        .delete()
-        .eq('user_id', userId)
-
-      if (driverError) throw driverError
-
-      await fetchData()
-    } catch (error) {
-      console.error('Error demoting from driver:', error)
-    }
+    const { error } = await supabase.from('users').update({ role: 'pengguna' }).eq('id', userId);
+    if (error) console.error(error); else refreshCurrentTab();
   }
-
-  const exportData = () => {
+  
+  // ... (Sisa kode komponen seperti exportData, getStatusColor, dan JSX return tetap sama)
+    const exportData = () => {
     const csvContent = "data:text/csv;charset=utf-8," + 
-      "ID,Nama,Telepon,WhatsApp,Role,Tanggal Daftar\n" +
+      "ID,Nama,Email,WhatsApp,Role,Tanggal Daftar\n" +
       users.map(user => 
-        `${user.id},${user.name},${user.phone},${user.wa_number},${user.role},${new Date(user.created_at).toLocaleDateString('id-ID')}`
+        [user.id, user.name, user.email, user.wa_number, user.role, new Date(user.created_at).toLocaleDateString('id-ID')].join(",")
       ).join("\n")
 
     const encodedUri = encodeURI(csvContent)
@@ -152,8 +89,10 @@ export default function AdminDashboard() {
     link.click()
     document.body.removeChild(link)
   }
-
-  const getStatusColor = (status: string) => {
+  
+  // Sisa kode komponen (return statement) tetap sama, tidak perlu diubah.
+  // ... (Salin sisa kode dari file asli Anda mulai dari `const getStatusColor = ...` hingga akhir)
+    const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'text-yellow-600 bg-yellow-50'
       case 'accepted': return 'text-blue-600 bg-blue-50'
@@ -243,7 +182,7 @@ export default function AdminDashboard() {
             {[
               {
                 title: 'Total Pengguna',
-                value: stats.totalUsers,
+                value: stats?.total_users,
                 icon: Users,
                 color: 'from-blue-500 to-blue-600',
                 bgColor: 'bg-blue-50',
@@ -251,7 +190,7 @@ export default function AdminDashboard() {
               },
               {
                 title: 'Total Driver',
-                value: stats.totalDrivers,
+                value: stats?.total_drivers,
                 icon: Car,
                 color: 'from-green-500 to-green-600',
                 bgColor: 'bg-green-50',
@@ -259,7 +198,7 @@ export default function AdminDashboard() {
               },
               {
                 title: 'Driver Aktif',
-                value: stats.activeDrivers,
+                value: stats?.active_drivers,
                 icon: UserCheck,
                 color: 'from-emerald-500 to-emerald-600',
                 bgColor: 'bg-emerald-50',
@@ -267,7 +206,7 @@ export default function AdminDashboard() {
               },
               {
                 title: 'Total Pesanan',
-                value: stats.totalOrders,
+                value: stats?.total_orders,
                 icon: Package,
                 color: 'from-orange-500 to-orange-600',
                 bgColor: 'bg-orange-50',
@@ -275,7 +214,7 @@ export default function AdminDashboard() {
               },
               {
                 title: 'Pesanan Selesai',
-                value: stats.completedOrders,
+                value: stats?.completed_orders,
                 icon: CheckCircle,
                 color: 'from-purple-500 to-purple-600',
                 bgColor: 'bg-purple-50',
@@ -283,7 +222,7 @@ export default function AdminDashboard() {
               },
               {
                 title: 'Pesanan Pending',
-                value: stats.pendingOrders,
+                value: stats?.pending_orders,
                 icon: Clock,
                 color: 'from-yellow-500 to-yellow-600',
                 bgColor: 'bg-yellow-50',
@@ -299,7 +238,7 @@ export default function AdminDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-gray-600 text-sm font-medium mb-1">{card.title}</p>
-                      <p className="text-3xl font-bold text-gray-900">{card.value}</p>
+                      <p className="text-3xl font-bold text-gray-900">{card.value ?? 0}</p>
                     </div>
                     <div className={`w-12 h-12 ${card.bgColor} rounded-lg flex items-center justify-center`}>
                       <Icon className={`w-6 h-6 ${card.iconColor}`} />

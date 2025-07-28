@@ -1,71 +1,78 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { supabase, type Driver, type Order } from '../lib/supabase'
+import { supabase, type Driver, type Order, type User } from '../lib/supabase'
 import { 
   Car, 
   Package, 
   MapPin, 
   Clock, 
-  User, 
-  Phone,
+  User as UserIcon, 
   Plus,
   History,
-  CheckCircle,
-  AlertCircle,
   MessageCircle
 } from 'lucide-react'
 
+
+// Definisikan tipe data driver yang akan dikembalikan oleh fungsi RPC kita
+// Ini sedikit berbeda dari interface Driver utama karena 'user' adalah JSON
+interface RpcDriverResponse {
+  id: string;
+  user_id: string;
+  status: 'online' | 'offline';
+  created_at: string;
+  updated_at: string;
+  user: User; // Properti 'user' berisi objek User yang lengkap
+}
+
 export default function UserDashboard() {
   const { user } = useAuth()
-  const [drivers, setDrivers] = useState<Driver[]>([])
+  const [drivers, setDrivers] = useState<RpcDriverResponse[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [showOrderForm, setShowOrderForm] = useState(false)
-  const [orderType, setOrderType] = useState<'delivery' | 'ride'>('delivery')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchDrivers()
-    fetchMyOrders()
+    async function getInitialData() {
+      if (!user) return;
+      setLoading(true);
+      try {
+        await Promise.all([
+          fetchDrivers(),
+          fetchMyOrders(user.id)
+        ]);
+      } catch (error) {
+        console.error("Gagal memuat data dasbor:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    
+    getInitialData();
   }, [user])
 
   async function fetchDrivers() {
-    try {
-      const { data, error } = await supabase
-        .from('drivers')
-        .select(`
-          *,
-          user:users(*)
-        `)
-        .eq('status', 'online')
+      // PERBAIKAN FINAL: Panggil fungsi RPC yang kebal RLS
+      const { data, error } = await supabase.rpc('get_online_drivers');
 
-      if (error) throw error
+      if (error) {
+        console.error('Error fetching drivers via RPC:', error)
+        throw error
+      }
       setDrivers(data || [])
-    } catch (error) {
-      console.error('Error fetching drivers:', error)
-    }
   }
 
-  async function fetchMyOrders() {
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(`
-          *,
-          driver:drivers(
-            *,
-            user:users(*)
-          )
-        `)
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false })
+  async function fetchMyOrders(userId: string) {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`*, driver:drivers(*, user:users(*))`)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
 
-      if (error) throw error
-      setOrders(data || [])
-    } catch (error) {
+    if (error) {
       console.error('Error fetching orders:', error)
-    } finally {
-      setLoading(false)
+      throw error
     }
+    setOrders(data || [])
   }
 
   const openWhatsApp = (waNumber: string, driverName: string) => {
@@ -73,7 +80,7 @@ export default function UserDashboard() {
     const url = `https://wa.me/${waNumber.replace(/^0/, '62')}?text=${encodeURIComponent(message)}`
     window.open(url, '_blank')
   }
-
+  
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'text-yellow-600 bg-yellow-50'
@@ -118,7 +125,6 @@ export default function UserDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Available Drivers */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -177,7 +183,7 @@ export default function UserDashboard() {
           </div>
         </div>
 
-        {/* Order History */}
+        {/* ... Sisa komponen (Histori Pesanan dan Modal) tetap sama persis ... */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100">
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
@@ -228,10 +234,10 @@ export default function UserDashboard() {
                         <MapPin className="w-3 h-3" />
                         <span>Ke: {order.dest_addr}</span>
                       </div>
-                      {order.driver?.user && (
+                      {order.driver && (
                         <div className="flex items-center space-x-2">
-                          <User className="w-3 h-3" />
-                          <span>Driver: {order.driver.user.name}</span>
+                          <UserIcon className="w-3 h-3" />
+                          <span>Driver: {order.driver.users?.name}</span>
                         </div>
                       )}
                       <div className="flex items-center space-x-2">
@@ -252,14 +258,13 @@ export default function UserDashboard() {
         </div>
       </div>
 
-      {/* Order Form Modal */}
       {showOrderForm && (
         <OrderFormModal
           isOpen={showOrderForm}
           onClose={() => setShowOrderForm(false)}
           onSuccess={() => {
-            setShowOrderForm(false)
-            fetchMyOrders()
+            setShowOrderForm(false);
+            if (user) fetchMyOrders(user.id);
           }}
           userId={user?.id || ''}
         />
@@ -268,6 +273,7 @@ export default function UserDashboard() {
   )
 }
 
+// ... Komponen OrderFormModal ...
 interface OrderFormModalProps {
   isOpen: boolean
   onClose: () => void
@@ -275,7 +281,7 @@ interface OrderFormModalProps {
   userId: string
 }
 
-function OrderFormModal({ isOpen, onClose, onSuccess, userId }: OrderFormModalProps) {
+function OrderFormModal({ isOpen, onClose, onSuccess, userId }: OrderFormModalProps): JSX.Element | null {
   const [orderType, setOrderType] = useState<'delivery' | 'ride'>('delivery')
   const [formData, setFormData] = useState({
     pickup_addr: '',
@@ -306,7 +312,7 @@ function OrderFormModal({ isOpen, onClose, onSuccess, userId }: OrderFormModalPr
       setLoading(false)
     }
   }
-
+  
   if (!isOpen) return null
 
   return (
@@ -323,7 +329,7 @@ function OrderFormModal({ isOpen, onClose, onSuccess, userId }: OrderFormModalPr
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
+             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Jenis Layanan
               </label>

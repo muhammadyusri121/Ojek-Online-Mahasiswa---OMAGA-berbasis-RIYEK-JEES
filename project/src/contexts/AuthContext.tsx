@@ -1,161 +1,153 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase, type User } from '../lib/supabase'
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { supabase, type User } from '../lib/supabase';
+import { Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
-  user: User | null
-  loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error?: string }>
-  signUp: (name: string, email: string, waNumber: string, password: string) => Promise<{ error?: string }>
-  signOut: () => Promise<void>
-  updateProfile: (updates: Partial<User>) => Promise<{ error?: string }>
+  user: User | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<{ error?: string }>;
+  signUp: (name: string, email: string, waNumber: string, password: string) => Promise<{ error?: string }>;
+  signOut: () => Promise<void>;
+  updateProfile: (updates: Partial<User>) => Promise<{ error?: string }>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fungsi untuk memvalidasi sesi dan mengambil profil terkait
+  const checkUserSession = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.user) {
+      // Token ada di local storage. Sekarang validasi ke backend.
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (error || !profile) {
+        // Token tidak valid atau profil tidak ada. Bersihkan sesi.
+        console.warn("Sesi lokal tidak valid, melakukan logout paksa.", error);
+        await supabase.auth.signOut();
+        setUser(null);
+      } else {
+        // Token valid dan profil ditemukan. Set user.
+        const combinedUser: User = {
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.name || profile.name,
+          wa_number: profile.wa_number,
+          role: profile.role,
+          profile_picture_url: profile.profile_picture_url,
+          created_at: profile.created_at,
+          updated_at: profile.updated_at
+        };
+        setUser(combinedUser);
+      }
+    } else {
+      // Tidak ada token sama sekali.
+      setUser(null);
+    }
+    // Apapun hasilnya, proses loading selesai.
+    setLoading(false);
+  };
 
   useEffect(() => {
-    getProfile()
+    // Jalankan pengecekan sesi saat aplikasi pertama kali dimuat.
+    checkUserSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        await getProfile()
-      } else {
-        setUser(null)
-      }
-      setLoading(false)
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
-
-  async function getProfile() {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        // Get user data from auth
-        const authUser = session.user
-        
-        // Get profile data from public.users
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', authUser.id)
-          .single()
-        
-        if (error) {
-          console.error('Error getting profile:', error)
-          return
+    // Listener ini untuk menangani perubahan real-time (login/logout manual).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        if (_event === 'SIGNED_IN' && session) {
+            checkUserSession();
+        } else if (_event === 'SIGNED_OUT') {
+            setUser(null);
         }
+    });
 
-        // Combine auth data with profile data
-        const combinedUser: User = {
-          id: authUser.id,
-          email: authUser.email,
-          name: authUser.user_metadata?.name || authUser.user_metadata?.full_name || '',
-          wa_number: data.wa_number,
-          role: data.role,
-          profile_picture_url: data.profile_picture_url,
-          created_at: data.created_at,
-          updated_at: data.updated_at
-        }
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
-        setUser(combinedUser)
-      }
-    } catch (error) {
-      console.error('Error getting profile:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function signIn(email: string, password: string) {
+ async function signIn(email: string, password: string) {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-      
-      if (error) throw error
-      await getProfile()
-      return {}
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // Jika berhasil, `onAuthStateChange` akan menangani sisanya
+      return {};
     } catch (error: any) {
-      return { error: error.message }
+      console.error("Sign In Error:", error.message);
+      // Terjemahkan pesan error umum ke Bahasa Indonesia
+      if (error.message === 'Invalid login credentials') {
+        return { error: 'Email atau password yang Anda masukkan salah.' };
+      }
+      return { error: error.message };
     }
   }
 
   async function signUp(name: string, email: string, waNumber: string, password: string) {
-    try {
-      const { data, error } = await supabase.auth.signUp({
+     try {
+      const { error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            name,
-            full_name: name,
-            wa_number: waNumber,
-            role: 'pengguna'
-          }
-        }
-      })
-
-      if (error) throw error
-
-      return {}
+        options: { data: { full_name: name, wa_number: waNumber } }
+      });
+      if (error) throw error;
+      return {};
     } catch (error: any) {
-      return { error: error.message }
+      console.error("Sign Up Error:", error.message);
+      return { error: error.message };
     }
   }
 
+  
   async function updateProfile(updates: Partial<User>) {
-    try {
-      if (!user) throw new Error('No user logged in')
-
-      // Update auth metadata if name is being updated
+      if (!user) throw new Error('Pengguna tidak login');
+  
+      // Update metadata di auth (jika ada)
       if (updates.name) {
-        const { error: authError } = await supabase.auth.updateUser({
-          data: { name: updates.name, full_name: updates.name }
-        })
-        if (authError) throw authError
+          const { error: authError } = await supabase.auth.updateUser({
+              data: { name: updates.name, full_name: updates.name }
+          });
+          if (authError) return { error: authError.message };
       }
-
-      // Update profile in public.users
-      const { error } = await supabase
-        .from('users')
-        .update({
-          wa_number: updates.wa_number,
-          role: updates.role,
-          profile_picture_url: updates.profile_picture_url
-        })
-        .eq('id', user.id)
-
-      if (error) throw error
+  
+      // Update data di tabel profil publik
+      const profileUpdates: { wa_number?: string; profile_picture_url?: string } = {};
+      if (updates.wa_number) profileUpdates.wa_number = updates.wa_number;
+      if (updates.profile_picture_url) profileUpdates.profile_picture_url = updates.profile_picture_url;
+  
+      if (Object.keys(profileUpdates).length > 0) {
+          const { error: profileError } = await supabase.from('users').update(profileUpdates).eq('id', user.id);
+          if (profileError) return { error: profileError.message };
+      }
       
-      await getProfile()
-      return {}
-    } catch (error: any) {
-      return { error: error.message }
-    }
+      // Setelah update, panggil checkUserSession untuk memuat ulang data user yang paling baru
+      await checkUserSession();
+      return {};
   }
 
   async function signOut() {
-    await supabase.auth.signOut()
-    setUser(null)
+    await supabase.auth.signOut();
+    setUser(null);
   }
 
   return (
     <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, updateProfile }}>
       {children}
     </AuthContext.Provider>
-  )
+  );
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext)
+  const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error('useAuth must be used within an AuthProvider');
   }
-  return context
+  return context;
 }
