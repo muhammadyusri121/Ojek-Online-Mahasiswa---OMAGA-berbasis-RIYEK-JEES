@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// src/pages/UserDashboard.tsx
+import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, type Driver, type Order, type User } from "../lib/supabase";
 import {
@@ -10,42 +11,72 @@ import {
   Plus,
   History,
   MessageCircle,
+  ArrowRight,
+  ChevronRight,
+  Bike,
+  ShoppingBag,
+  Info
 } from "lucide-react";
 
-// Definisikan kembali tipe data driver yang dikembalikan oleh fungsi RPC
+// --- (Semua kode di bawah ini adalah baru atau telah didesain ulang) ---
+
+// Ilustrasi Kustom (dalam format komponen React)
+const HeroIllustration = () => (
+  <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M100 190C149.706 190 190 149.706 190 100C190 50.2944 149.706 10 100 10C50.2944 10 10 50.2944 10 100C10 149.706 50.2944 190 100 190Z" fill="#E8F5E9"/>
+    <path d="M141.429 111.429C147.11 111.429 151.429 107.11 151.429 101.429C151.429 95.7475 147.11 91.4287 141.429 91.4287C135.747 91.4287 131.429 95.7475 131.429 101.429C131.429 107.11 135.747 111.429 141.429 111.429Z" fill="#4CAF50"/>
+    <path d="M129.5 130H72.5L62.5 105H112.5L120 130H129.5Z" fill="#2E7D32"/>
+    <path d="M130 130L120 105L132.5 97.5L145 120L130 130Z" fill="#28a745"/>
+    <path d="M80 105L70 80L55 90L62.5 105H80Z" fill="#28a745"/>
+    <path d="M90 92.5C90 96.6421 86.6421 100 82.5 100C78.3579 100 75 96.6421 75 92.5C75 88.3579 78.3579 85 82.5 85C86.6421 85 90 88.3579 90 92.5Z" fill="#FFFFFF"/>
+    <path d="M122.5 92.5C122.5 96.6421 119.142 100 115 100C110.858 100 107.5 96.6421 107.5 92.5C107.5 88.3579 110.858 85 115 85C119.142 85 122.5 88.3579 122.5 92.5Z" fill="#FFFFFF"/>
+  </svg>
+);
+
+// Tipe data untuk driver dari RPC
 interface RpcDriverResponse {
-  id: string;
-  user_id: string;
-  status: "online" | "offline";
-  created_at: string;
-  updated_at: string;
-  user: User;
+  id: string; user_id: string; status: "online" | "offline";
+  created_at: string; updated_at: string; user: User;
 }
 
-// --- PERUBAHAN 1: Tambahkan 'drivers' ke dalam props untuk modal ---
-interface OrderFormModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-  userId: string;
-  drivers: RpcDriverResponse[]; // Prop baru untuk menerima daftar driver
-}
+// Data Tarif (bisa dipindahkan ke file terpisah nanti)
+const antarJemputRates = [
+  { from: "Kampus", to: "Telang", price: 5000 },
+  { from: "Kampus", to: "Graha Kamal", price: 7000 },
+  { from: "Kampus", to: "Perumnas Kamal", price: 10000 },
+  { from: "Kampus", to: "Socah", price: 10000 },
+  { from: "Kampus", to: "Pelabuhan Kamal", price: 15000 },
+  { from: "Kampus", to: "Alang-Alang", price: 25000 },
+  { from: "Terminal", to: "Bangkalan", price: 25000 },
+  { from: "Bangkalan", to: "Kota", price: 30000 },
+  { from: "Stasiun", to: "Gubeng", price: 55000 },
+  { from: "Stasiun", to: "Pasar Turi", price: 60000 },
+  { from: "Terminal", to: "Bungurasih", price: 100000 },
+];
+const deliveryRates = [
+  { to: "Telang", price: 5000 }, { to: "Graha Kamal", price: 7000 }, { to: "Perumnas Kamal", price: 10000 },
+];
 
-// Komponen Modal yang dimodifikasi
+// Salin seluruh fungsi komponen ini
 function OrderFormModal({
   isOpen,
   onClose,
   onSuccess,
   userId,
   drivers,
-}: OrderFormModalProps): JSX.Element | null {
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+  userId: string;
+  drivers: RpcDriverResponse[];
+}): JSX.Element | null {
   const [orderType, setOrderType] = useState<"delivery" | "ride">("delivery");
   const [formData, setFormData] = useState({
     pickup_addr: "",
     dest_addr: "",
     notes: "",
   });
-  // --- PERUBAHAN 2: State baru untuk menyimpan ID driver yang dipilih ---
   const [selectedDriverId, setSelectedDriverId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -53,7 +84,6 @@ function OrderFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    // Validasi sederhana untuk memastikan driver telah dipilih
     if (!selectedDriverId) {
       setError("Silakan pilih driver terlebih dahulu.");
       return;
@@ -61,7 +91,6 @@ function OrderFormModal({
     setLoading(true);
 
     try {
-      // --- PERUBAHAN 3: Sertakan `driver_id` saat membuat pesanan ---
       const { error } = await supabase.from("orders").insert({
         user_id: userId,
         type: orderType,
@@ -69,7 +98,7 @@ function OrderFormModal({
         dest_addr: formData.dest_addr,
         notes: formData.notes,
         status: "pending",
-        driver_id: selectedDriverId, // Menambahkan ID driver yang dipilih
+        driver_id: selectedDriverId,
       });
 
       if (error) throw error;
@@ -91,7 +120,6 @@ function OrderFormModal({
           className="fixed inset-0 transition-opacity bg-black bg-opacity-50"
           onClick={onClose}
         />
-
         <div className="inline-block w-full max-w-md p-6 my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-2xl">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-medium text-gray-900">
@@ -104,9 +132,7 @@ function OrderFormModal({
               <Plus className="w-5 h-5 transform rotate-45" />
             </button>
           </div>
-
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* ... Form Jenis Layanan, Alamat, dll tetap sama ... */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Jenis Layanan
@@ -138,8 +164,6 @@ function OrderFormModal({
                 </button>
               </div>
             </div>
-
-            {/* --- PERUBAHAN 4: Dropdown untuk memilih driver --- */}
             <div>
               <label
                 htmlFor="driver-select"
@@ -164,7 +188,6 @@ function OrderFormModal({
                 ))}
               </select>
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 {orderType === "delivery"
@@ -179,10 +202,9 @@ function OrderFormModal({
                   setFormData({ ...formData, pickup_addr: e.target.value })
                 }
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Masukkan alamat lengkap"
+                placeholder="misal: Toko Abell"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Alamat Tujuan
@@ -198,7 +220,6 @@ function OrderFormModal({
                 placeholder="Masukkan alamat tujuan"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Catatan (Opsional)
@@ -213,9 +234,7 @@ function OrderFormModal({
                 placeholder="Tambahkan catatan jika diperlukan"
               />
             </div>
-
             {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
-
             <div className="flex space-x-3 pt-4">
               <button
                 type="button"
@@ -238,7 +257,6 @@ function OrderFormModal({
     </div>
   );
 }
-
 export default function UserDashboard() {
   const { user } = useAuth();
   const [drivers, setDrivers] = useState<RpcDriverResponse[]>([]);
@@ -246,291 +264,228 @@ export default function UserDashboard() {
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // ... (useEffect dan fungsi fetch data lainnya tidak berubah) ...
-  useEffect(() => {
-    async function getInitialData() {
-      if (!user) return;
-      setLoading(true);
-      try {
-        await Promise.all([fetchDrivers(), fetchMyOrders(user.id)]);
-      } catch (error) {
-        console.error("Gagal memuat data dasbor:", error);
-      } finally {
-        setLoading(false);
-      }
+  const fetchData = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const [driversRes, ordersRes] = await Promise.all([
+        supabase.rpc("get_online_drivers"),
+        supabase.from("orders").select(`*, driver:drivers(*, user:users(*))`).eq("user_id", user.id).order("created_at", { ascending: false })
+      ]);
+      if (driversRes.error) throw driversRes.error;
+      if (ordersRes.error) throw ordersRes.error;
+      setDrivers(driversRes.data || []);
+      setOrders(ordersRes.data || []);
+    } catch (error) {
+      console.error("Gagal memuat data dasbor:", error);
+    } finally {
+      setLoading(false);
     }
-
-    getInitialData();
   }, [user]);
 
-  async function fetchDrivers() {
-    const { data, error } = await supabase.rpc("get_online_drivers");
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
-    if (error) {
-      console.error("Error fetching drivers via RPC:", error);
-      throw error;
-    }
-    setDrivers(data || []);
-  }
+  const getStatusColor = (status: string) => ({
+    pending: "text-yellow-800 bg-yellow-100",
+    accepted: "text-blue-800 bg-blue-100",
+    in_progress: "text-orange-800 bg-orange-100",
+    completed: "text-green-800 bg-green-100",
+    cancelled: "text-red-800 bg-red-100",
+  }[status] || "text-gray-800 bg-gray-100");
 
-  async function fetchMyOrders(userId: string) {
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`*, driver:drivers(*, user:users(*))`)
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching orders:", error);
-      throw error;
-    }
-    setOrders(data || []);
-  }
-
-  const openWhatsApp = (waNumber: string, driverName: string) => {
-    const message = `Halo ${driverName}, saya ingin memesan ojek melalui aplikasi OMAGA. Terima kasih!`;
-    const url = `https://wa.me/${waNumber.replace(
-      /^0/,
-      "62"
-    )}?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank");
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "text-yellow-600 bg-yellow-50";
-      case "accepted":
-        return "text-blue-600 bg-blue-50";
-      case "in_progress":
-        return "text-orange-600 bg-orange-50";
-      case "completed":
-        return "text-green-600 bg-green-50";
-      case "cancelled":
-        return "text-red-600 bg-red-50";
-      default:
-        return "text-gray-600 bg-gray-50";
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "Menunggu";
-      case "accepted":
-        return "Diterima";
-      case "in_progress":
-        return "Dalam Perjalanan";
-      case "completed":
-        return "Selesai";
-      case "cancelled":
-        return "Dibatalkan";
-      default:
-        return status;
-    }
-  };
+  const getStatusText = (status: string) => ({
+    pending: "Menunggu", accepted: "Diterima",
+    in_progress: "Dalam Perjalanan", completed: "Selesai",
+    cancelled: "Dibatalkan",
+  }[status] || status);
 
   if (loading) {
-    // ... (Indikator loading tidak berubah) ...
     return (
-      <div className="p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white p-6 rounded-lg shadow h-64"></div>
-            <div className="bg-white p-6 rounded-lg shadow h-64"></div>
-          </div>
+      <div className="p-6 bg-gray-50 min-h-screen animate-pulse">
+        <div className="h-24 bg-gray-200 rounded-xl mb-8"></div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 h-64 bg-gray-200 rounded-xl"></div>
+          <div className="h-64 bg-gray-200 rounded-xl"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Dashboard Pengguna
-        </h1>
-        <p className="text-gray-600">Pesan ojek dan pantau perjalanan Anda</p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* ... (Tampilan Driver Online tidak berubah) ... */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Car className="w-5 h-5 text-blue-600" />
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Driver Online
-                </h2>
-              </div>
-              <span className="text-sm text-gray-500">
-                {drivers.length} driver tersedia
-              </span>
-            </div>
-          </div>
-          <div className="p-6 max-h-96 overflow-y-auto">
-            {drivers.length === 0 ? (
-              <div className="text-center py-8">
-                <Car className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">
-                  Tidak ada driver online saat ini
+    <div className="bg-gray-50 min-h-screen">
+      <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+        {/* Welcome Banner */}
+        <div className="relative bg-green-600 text-white p-8 rounded-2xl shadow-lg overflow-hidden mb-8 flex flex-col md:flex-row items-center justify-between">
+            <div className="z-10">
+                <h1 className="text-3xl sm:text-4xl font-bold mb-2">
+                    Selamat Datang, {user?.name}!
+                </h1>
+                <p className="text-green-100 max-w-md">
+                    Siap untuk pergi atau butuh sesuatu diantar? Pesan sekarang dengan mudah dan cepat.
                 </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {drivers.map((driver) => (
-                  <div
-                    key={driver.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex items-center space-x-3">
-                      {driver.user?.profile_picture_url ? (
-                        <img
-                          src={driver.user.profile_picture_url}
-                          alt="Profile"
-                          className="w-10 h-10 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 bg-blue-900 rounded-full flex items-center justify-center">
-                          <span className="text-white font-medium">
-                            {driver.user?.name?.charAt(0)?.toUpperCase() || "D"}
-                          </span>
-                        </div>
-                      )}
-                      <div>
-                        <p className="font-medium text-gray-900">
-                          {driver.user?.name}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {driver.user?.wa_number}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-50 text-green-600">
-                        Online
-                      </span>
-                      <button
-                        onClick={() =>
-                          openWhatsApp(
-                            driver.user?.wa_number || "",
-                            driver.user?.name || ""
-                          )
-                        }
-                        className="flex items-center space-x-1 px-3 py-1 bg-green-500 hover:bg-green-600 text-white text-sm rounded-lg transition-colors"
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        <span>WhatsApp</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        {/* ... (Tampilan Histori Pesanan tidak berubah) ... */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <History className="w-5 h-5 text-orange-600" />
-                <h2 className="text-xl font-semibold text-gray-900">
-                  Histori Pesanan
-                </h2>
-              </div>
-              <button
-                onClick={() => setShowOrderForm(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white rounded-lg transition-all"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Pesan Baru</span>
-              </button>
+                <button
+                    onClick={() => setShowOrderForm(true)}
+                    className="mt-6 bg-white text-green-700 font-bold py-3 px-6 rounded-lg shadow-md hover:bg-gray-100 transition-transform transform hover:scale-105 flex items-center space-x-2"
+                >
+                    <span>Pesan Sekarang</span>
+                    <ArrowRight className="w-5 h-5" />
+                </button>
             </div>
-          </div>
-          <div className="p-6 max-h-96 overflow-y-auto">
-            {orders.length === 0 ? (
-              <div className="text-center py-8">
-                <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-500">Belum ada pesanan</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {orders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="p-4 border border-gray-200 rounded-lg"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center space-x-2">
-                        {order.type === "delivery" ? (
-                          <Package className="w-4 h-4 text-orange-600" />
-                        ) : (
-                          <Car className="w-4 h-4 text-blue-600" />
-                        )}
-                        <span className="font-medium text-gray-900 capitalize">
-                          {order.type === "delivery" ? "Delivery" : "Ride"}
-                        </span>
-                      </div>
-                      <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
-                          order.status
-                        )}`}
-                      >
-                        {getStatusText(order.status)}
-                      </span>
-                    </div>
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="w-3 h-3" />
-                        <span>Dari: {order.pickup_addr}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="w-3 h-3" />
-                        <span>Ke: {order.dest_addr}</span>
-                      </div>
-                      {order.driver && (
-                        <div className="flex items-center space-x-2">
-                          <UserIcon className="w-3 h-3" />
-                          <span>Driver: {order.driver.users?.name}</span>
-                        </div>
-                      )}
-                      <div className="flex items-center space-x-2">
-                        <Clock className="w-3 h-3" />
-                        <span>
-                          {new Date(order.created_at).toLocaleDateString(
-                            "id-ID"
-                          )}
-                        </span>
-                      </div>
-                    </div>
-                    {order.notes && (
-                      <div className="mt-2 text-sm text-gray-600">
-                        <span className="font-medium">Catatan:</span>{" "}
-                        {order.notes}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+            <div className="absolute -right-12 -bottom-12 opacity-20 z-0">
+                <HeroIllustration />
+            </div>
         </div>
-      </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Kolom Kiri: Driver & Histori */}
+            <div className="lg:col-span-2 space-y-8">
+                {/* Daftar Driver Online */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="p-6 border-b border-gray-200">
+                        <h2 className="text-xl font-bold text-gray-800">Driver Siap Jalan</h2>
+                        <p className="text-gray-500">{drivers.length} driver sedang online</p>
+                    </div>
+                    <div className="p-6 max-h-96 overflow-y-auto">
+                        {drivers.length > 0 ? (
+                          <div className="space-y-4">
+                            {drivers.map((driver) => (
+                              <div key={driver.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                                <div className="flex items-center space-x-4">
+                                  {/* Avatar */}
+                                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                                    <span className="text-xl font-bold text-green-700">{driver.user?.name?.charAt(0)?.toUpperCase() || "D"}</span>
+                                  </div>
+                                  <div>
+                                    <p className="font-semibold text-gray-900">{driver.user?.name}</p>
+                                    <p className="text-sm text-gray-500">{driver.user?.wa_number}</p>
+                                  </div>
+                                </div>
+                                <a href={`https://wa.me/${driver.user.wa_number?.replace(/^0/, '62')}`} target="_blank" rel="noopener noreferrer" className="bg-green-500 text-white px-4 py-2 rounded-lg shadow-sm hover:bg-green-600 transition-all flex items-center space-x-2">
+                                  <MessageCircle className="w-4 h-4" />
+                                  <span>Chat</span>
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-12">
+                            <Car className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                            <p className="font-semibold text-gray-600">Yah, belum ada driver yang online</p>
+                            <p className="text-gray-400">Coba cek lagi beberapa saat nanti.</p>
+                          </div>
+                        )}
+                    </div>
+                </div>
 
-      {/* --- PERUBAHAN 5: Teruskan 'drivers' ke modal saat dipanggil --- */}
+                {/* Histori Pesanan */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
+                    <div className="p-6 border-b border-gray-200">
+                        <h2 className="text-xl font-bold text-gray-800">Riwayat Pesanan Anda</h2>
+                    </div>
+                    <div className="p-6 max-h-96 overflow-y-auto">
+                        {orders.length > 0 ? (
+                            <div className="space-y-4">
+                            {orders.map((order) => (
+                              <div key={order.id} className="p-4 border border-gray-200 rounded-xl">
+                                <div className="flex justify-between items-start mb-3">
+                                  <div className="flex items-center space-x-3">
+                                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${order.type === "delivery" ? "bg-orange-100" : "bg-blue-100"}`}>
+                                      {order.type === "delivery" ? <ShoppingBag className="w-5 h-5 text-orange-600" /> : <Bike className="w-5 h-5 text-blue-600" />}
+                                    </div>
+                                    <div>
+                                      <p className="font-bold text-gray-800 capitalize">{order.type}</p>
+                                      <p className="text-xs text-gray-500">{new Date(order.created_at).toLocaleDateString("id-ID")}</p>
+                                    </div>
+                                  </div>
+                                  <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>{getStatusText(order.status)}</span>
+                                </div>
+                                <div className="space-y-2 text-sm text-gray-600 border-l-2 border-gray-100 pl-4 ml-5">
+                                    <p><b>Dari:</b> {order.pickup_addr}</p>
+                                    <p><b>Ke:</b> {order.dest_addr}</p>
+                                    {order.driver && <p><b>Driver:</b> {order.driver.user?.name}</p>}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                           <div className="text-center py-12">
+                            <History className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                            <p className="font-semibold text-gray-600">Anda belum pernah memesan</p>
+                            <p className="text-gray-400">Ayo buat pesanan pertamamu!</p>
+                          </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* Kolom Kanan: Daftar Harga */}
+            <div className="space-y-8">
+                {/* Tarif Antar-Jemput */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
+                    <div className="p-6 border-b border-gray-200 flex items-center space-x-3">
+                        <Bike className="w-6 h-6 text-green-600" />
+                        <h3 className="text-lg font-bold text-gray-800">Tarif Antar - Jemput</h3>
+                    </div>
+                    <div className="p-6 space-y-3">
+                        {antarJemputRates.slice(0, 5).map((rate, index) => (
+                            <div key={index} className="flex justify-between items-center text-sm">
+                                <p className="text-gray-600">{rate.from} - {rate.to}</p>
+                                <p className="font-bold text-green-700">Rp {rate.price.toLocaleString('id-ID')}</p>
+                            </div>
+                        ))}
+                        <div className="pt-2 text-center text-xs text-gray-400">
+                           ... dan banyak lagi
+                        </div>
+                    </div>
+                </div>
+
+                {/* Tarif Delivery */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-200">
+                    <div className="p-6 border-b border-gray-200 flex items-center space-x-3">
+                        <ShoppingBag className="w-6 h-6 text-orange-500" />
+                        <h3 className="text-lg font-bold text-gray-800">Tarif Delivery Order (DO)</h3>
+                    </div>
+                     <div className="p-6 space-y-3">
+                        {deliveryRates.map((rate, index) => (
+                            <div key={index} className="flex justify-between items-center text-sm">
+                                <p className="text-gray-600">Area {rate.to}</p>
+                                <p className="font-bold text-green-700">Rp {rate.price.toLocaleString('id-ID')}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+                
+                {/* Aturan Tambahan */}
+                 <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+                    <div className="flex items-start">
+                        <Info className="w-5 h-5 text-green-600 mr-3 mt-1 flex-shrink-0" />
+                        <div>
+                            <h4 className="font-bold text-green-800">Info Tambahan</h4>
+                            <ul className="list-disc list-inside text-sm text-green-700 mt-2 space-y-1">
+                                <li>Tarif di luar daftar: <strong>Rp 2,200/km</strong></li>
+                                <li>Biaya parkir (jika ada): <strong>+Rp 2,000</strong></li>
+                                <li>Mampir ke tempat lain: <strong>+Rp 5,000/tempat</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      </main>
+
+      {/* Modal Pemesanan */}
       {showOrderForm && (
         <OrderFormModal
           isOpen={showOrderForm}
           onClose={() => setShowOrderForm(false)}
           onSuccess={() => {
             setShowOrderForm(false);
-            if (user) fetchMyOrders(user.id);
+            if (user) fetchData();
           }}
           userId={user?.id || ""}
-          drivers={drivers} // <-- Prop baru ditambahkan di sini
+          drivers={drivers}
         />
       )}
     </div>
