@@ -1,4 +1,5 @@
 // src/pages/UserDashboard.tsx
+
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { supabase, type Driver, type Order, type User } from "../lib/supabase";
@@ -17,8 +18,6 @@ import {
   ShoppingBag,
   Info,
 } from "lucide-react";
-
-// --- (Semua kode di bawah ini adalah baru atau telah didesain ulang) ---
 
 // Ilustrasi Kustom (dalam format komponen React)
 const HeroIllustration = () => (
@@ -61,7 +60,7 @@ interface RpcDriverResponse {
   user: User;
 }
 
-// Data Tarif (bisa dipindahkan ke file terpisah nanti)
+// Data Tarif
 const antarJemputRates = [
   { from: "Kampus", to: "Telang", price: 5000 },
   { from: "Kampus", to: "Graha Kamal", price: 7000 },
@@ -81,7 +80,6 @@ const deliveryRates = [
   { to: "Perumnas Kamal", price: 10000 },
 ];
 
-// Salin seluruh fungsi komponen ini
 function OrderFormModal({
   isOpen,
   onClose,
@@ -281,6 +279,7 @@ function OrderFormModal({
     </div>
   );
 }
+
 export default function UserDashboard() {
   const { user } = useAuth();
   const [drivers, setDrivers] = useState<RpcDriverResponse[]>([]);
@@ -393,13 +392,21 @@ export default function UserDashboard() {
                         className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
                       >
                         <div className="flex items-center space-x-4">
-                          {/* Avatar */}
-                          <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-                            <span className="text-xl font-bold text-green-700">
-                              {driver.user?.name?.charAt(0)?.toUpperCase() ||
-                                "D"}
-                            </span>
-                          </div>
+                          {/* === PENYESUAIAN DI SINI === */}
+                          {driver.user?.profile_picture_url ? (
+                            <img
+                              src={driver.user.profile_picture_url}
+                              alt={driver.user.name || "Driver"}
+                              className="w-12 h-12 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                              <span className="text-xl font-bold text-green-700">
+                                {driver.user?.name?.charAt(0)?.toUpperCase() ||
+                                  "D"}
+                              </span>
+                            </div>
+                          )}
                           <div>
                             <p className="font-semibold text-gray-900">
                               {driver.user?.name}
@@ -581,9 +588,6 @@ export default function UserDashboard() {
                     </li>
                     <li>
                       Biaya parkir (jika ada): <strong>+Rp 2,000</strong>
-                    </li>
-                    <li>
-                      Mampir ke tempat lain: <strong>+Rp 5,000/tempat</strong>
                     </li>
                   </ul>
                 </div>
