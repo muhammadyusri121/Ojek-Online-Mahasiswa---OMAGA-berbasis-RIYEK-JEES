@@ -267,4 +267,8 @@ USING (
       user_id = auth.uid() OR 
       driver_id = (SELECT id FROM public.drivers WHERE user_id = auth.uid())
   ))
+<<<<<<< HEAD
 );
+=======
+);
+>>>>>>> 9de6589 (update logo)

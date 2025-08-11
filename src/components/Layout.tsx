@@ -46,9 +46,6 @@ export default function Layout({ children }: LayoutProps) {
     await signOut();
   };
 
-  // Ganti "USERNAME_ANDA" dengan username Instagram Anda
-  const instagramUsername = "USERNAME_ANDA";
-
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <div className="flex flex-1">
@@ -65,9 +62,12 @@ export default function Layout({ children }: LayoutProps) {
           <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-xl flex flex-col">
             <div className="flex h-16 items-center justify-between px-4 border-b border-gray-200 flex-shrink-0">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-orange-500 rounded-lg flex items-center justify-center">
-                  <Car className="w-5 h-5 text-white" />
-                </div>
+                <img
+                  src="/logo-omaga.png"
+                  alt="OMAGA Logo"
+                  className="w-8 h-8"
+                  style={{ width: "50px", height: "30px", marginTop: "-10px" }}
+                />
                 <span className="text-xl font-bold bg-gradient-to-r from-blue-900 to-orange-500 bg-clip-text text-transparent">
                   OMAGA
                 </span>
@@ -88,8 +88,7 @@ export default function Layout({ children }: LayoutProps) {
                     className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive
                         ? "bg-blue-900 text-white"
-                        :
-                          "text-gray-700 hover:bg-green-50 hover:text-green-800"
+                        : "text-gray-700 hover:bg-green-50 hover:text-green-800"
                     }`}
                   >
                     <Icon className="w-5 h-5" />
@@ -138,9 +137,12 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex flex-col flex-grow bg-white border-r border-gray-200">
             <div className="flex h-16 items-center px-4 border-b border-gray-200 flex-shrink-0">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-900 to-orange-500 rounded-lg flex items-center justify-center">
-                  <Car className="w-5 h-5 text-white" />
-                </div>
+                <img
+                  src="/logo-omaga.png"
+                  alt="OMAGA Logo"
+                  className="w-8 h-8"
+                  style={{ width: "50px", height: "30px", marginTop: "-10px" }}
+                />
                 <span className="text-xl font-bold bg-gradient-to-r from-blue-900 to-orange-500 bg-clip-text text-transparent">
                   OMAGA
                 </span>
@@ -211,9 +213,13 @@ export default function Layout({ children }: LayoutProps) {
                 <Menu className="w-6 h-6 text-gray-500" />
               </button>
               <div className="flex items-center space-x-2">
-                <div className="w-6 h-6 bg-gradient-to-r from-blue-900 to-orange-500 rounded flex items-center justify-center">
-                  <Car className="w-4 h-4 text-white" />
-                </div>
+                {/* geser logo sedikit ke atas */}
+                <img
+                  src="/logo-omaga.png"
+                  alt="OMAGA Logo"
+                  className="w-8 h-8"
+                  style={{ width: "50px", height: "30px", marginTop: "-10px" }}
+                />
                 <span className="text-lg font-bold bg-gradient-to-r from-blue-900 to-orange-500 bg-clip-text text-transparent">
                   OMAGA
                 </span>
@@ -225,9 +231,6 @@ export default function Layout({ children }: LayoutProps) {
           {/* Page content */}
           <main className="flex-1">{children}</main>
 
-          {/* ========================================================== */}
-          {/* === 2. KODE FOOTER BARU DITAMBAHKAN DI SINI === */}
-          {/* ========================================================== */}
           {/* Footer */}
           <footer className="bg-white text-center p-3 border-t border-gray-200 mt-auto">
             <div className="text-sm text-gray-500 flex flex-col sm:flex-row items-center justify-center gap-1">

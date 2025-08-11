@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { Car, Mail, Lock, AlertCircle } from "lucide-react";
+import { Mail, Lock, AlertCircle } from "lucide-react";
 
 export default function Login() {
   const { user, signIn, loading } = useAuth();
@@ -32,9 +32,12 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-orange-500 flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-r from-blue-900 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Car className="w-8 h-8 text-white" />
-          </div>
+          <img
+            src="/logo-omaga.png"
+            alt="OMAGA Logo"
+            className="w-10 h-8 mx-auto mb-4"
+            style={{ width: "90px", height: "60px", marginTop: "-10px" }}
+          />
           <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-900 to-orange-500 bg-clip-text text-transparent">
             OMAGA
           </h1>
