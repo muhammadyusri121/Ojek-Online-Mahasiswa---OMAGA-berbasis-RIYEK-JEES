@@ -1,3 +1,5 @@
+// src/components/Layout.tsx
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
@@ -9,7 +11,8 @@ import {
   LogOut,
   Menu,
   X,
-  Instagram, // <-- 1. Tambahkan impor ikon Instagram
+  Instagram,
+  Book, // Pastikan ikon Book sudah diimpor
 } from "lucide-react";
 
 interface LayoutProps {
@@ -21,21 +24,51 @@ export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
+  // Revisi: Mengubah nama item navigasi
   const navigation = [
     {
       name: "Dashboard",
       href: "/",
       icon: Home,
       roles: ["admin", "driver", "pengguna"],
+      isLink: true,
     },
     {
       name: "Profil",
       href: "/profile",
       icon: User,
       roles: ["admin", "driver", "pengguna"],
+      isLink: true,
     },
-    { name: "Driver", href: "/driver", icon: Car, roles: ["admin", "driver"] },
-    { name: "Admin", href: "/admin", icon: Settings, roles: ["admin"] },
+    {
+      name: "Driver",
+      href: "/driver",
+      icon: Car,
+      roles: ["admin", "driver"],
+      isLink: true,
+    },
+    {
+      name: "Admin",
+      href: "/admin",
+      icon: Settings,
+      roles: ["admin"],
+      isLink: true,
+    },
+    // == ITEM YANG DIREVISI ==
+    {
+      name: "Panduan & Informasi", // Nama menu diubah
+      href: "/panduan-pelanggan.pdf", // Path ke file PDF pelanggan
+      icon: Book,
+      roles: ["pengguna"], // Hanya tampil untuk pelanggan
+      isLink: false, // Tandai ini bukan link navigasi internal
+    },
+    {
+      name: "Panduan & Informasi", // Nama menu diubah
+      href: "/panduan-driver.pdf", // Path ke file PDF driver
+      icon: Book,
+      roles: ["driver", "admin"], // Tampil untuk driver dan admin
+      isLink: false,
+    },
   ];
 
   const filteredNavigation = navigation.filter(
@@ -44,6 +77,48 @@ export default function Layout({ children }: LayoutProps) {
 
   const handleSignOut = async () => {
     await signOut();
+  };
+
+  // Fungsi untuk merender item navigasi
+  const renderNavItem = (item: any, isMobile = false) => {
+    const Icon = item.icon;
+    const isActive = location.pathname === item.href;
+
+    const navClasses = `flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+      isActive
+        ? "bg-blue-900 text-white"
+        : "text-gray-700 hover:bg-green-50 hover:text-green-800"
+    }`;
+
+    // Jika item adalah link navigasi internal, gunakan <Link>
+    if (item.isLink) {
+      return (
+        <Link
+          key={item.name}
+          to={item.href}
+          onClick={() => isMobile && setSidebarOpen(false)}
+          className={navClasses}
+        >
+          <Icon className="w-5 h-5" />
+          <span>{item.name}</span>
+        </Link>
+      );
+    }
+
+    // Jika bukan (untuk PDF), gunakan tag <a>
+    // Ini akan membuka PDF di tab baru untuk preview, dan dari sana bisa di-download
+    return (
+      <a
+        key={item.name}
+        href={item.href}
+        target="_blank" // Buka di tab baru (untuk preview)
+        rel="noopener noreferrer"
+        className={navClasses}
+      >
+        <Icon className="w-5 h-5" />
+        <span>{item.name}</span>
+      </a>
+    );
   };
 
   return (
@@ -77,25 +152,7 @@ export default function Layout({ children }: LayoutProps) {
               </button>
             </div>
             <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
-              {filteredNavigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    onClick={() => setSidebarOpen(false)}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-blue-900 text-white"
-                        : "text-gray-700 hover:bg-green-50 hover:text-green-800"
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
+              {filteredNavigation.map((item) => renderNavItem(item, true))}
             </nav>
             <div className="border-t border-gray-200 p-4 flex-shrink-0">
               <div className="flex items-center space-x-3 mb-3">
@@ -149,25 +206,7 @@ export default function Layout({ children }: LayoutProps) {
               </div>
             </div>
             <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
-              {filteredNavigation.map((item) => {
-                const Icon = item.icon;
-                const isActive = location.pathname === item.href;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-blue-900 text-white"
-                        : // Menggunakan warna hijau dari desain baru
-                          "text-gray-700 hover:bg-green-50 hover:text-green-800"
-                    }`}
-                  >
-                    <Icon className="w-5 h-5" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              })}
+              {filteredNavigation.map((item) => renderNavItem(item))}
             </nav>
             <div className="border-t border-gray-200 p-4 flex-shrink-0">
               <div className="flex items-center space-x-3 mb-3">
@@ -213,7 +252,6 @@ export default function Layout({ children }: LayoutProps) {
                 <Menu className="w-6 h-6 text-gray-500" />
               </button>
               <div className="flex items-center space-x-2">
-                {/* geser logo sedikit ke atas */}
                 <img
                   src="/logo-omaga.png"
                   alt="OMAGA Logo"
@@ -254,8 +292,6 @@ export default function Layout({ children }: LayoutProps) {
               </span>
             </div>
           </footer>
-
-          {/* ========================================================== */}
         </div>
       </div>
     </div>
