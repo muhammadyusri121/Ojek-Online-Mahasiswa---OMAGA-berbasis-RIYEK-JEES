@@ -1,50 +1,63 @@
-import React, { useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import { Car, User, Phone, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
+import React, { useState } from "react";
+import { Link, Navigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import {
+  Car,
+  User,
+  Phone,
+  Mail,
+  Lock,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react";
 
 export default function Register() {
-  const { user, signUp, loading } = useAuth()
+  const { user, signUp, loading } = useAuth();
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    waNumber: '',
-    password: '',
-    confirmPassword: ''
-  })
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+    name: "",
+    email: "",
+    waNumber: "",
+    password: "",
+    confirmPassword: "",
+  });
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   if (user && !loading) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
 
     if (formData.password !== formData.confirmPassword) {
-      setError('Password tidak cocok')
-      setIsLoading(false)
-      return
+      setError("Password tidak cocok");
+      setIsLoading(false);
+      return;
     }
 
     if (formData.password.length < 6) {
-      setError('Password minimal 6 karakter')
-      setIsLoading(false)
-      return
+      setError("Password minimal 6 karakter");
+      setIsLoading(false);
+      return;
     }
 
-    const result = await signUp(formData.name, formData.email, formData.waNumber, formData.password)
+    const result = await signUp(
+      formData.name,
+      formData.email,
+      formData.waNumber,
+      formData.password
+    );
     if (result.error) {
-      setError(result.error)
+      setError(result.error);
     } else {
-      setSuccess(true)
+      setSuccess(true);
     }
-    setIsLoading(false)
-  }
+    setIsLoading(false);
+  };
 
   if (success) {
     return (
@@ -53,9 +66,12 @@ export default function Register() {
           <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <CheckCircle className="w-8 h-8 text-green-600" />
           </div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-4">Registrasi Berhasil!</h2>
+          <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+            Registrasi Berhasil!
+          </h2>
           <p className="text-gray-600 mb-6">
-            Akun Anda telah berhasil dibuat. Silakan cek email untuk verifikasi, lalu login untuk melanjutkan.
+            Akun Anda telah berhasil dibuat. Silakan cek email untuk verifikasi,
+            lalu login untuk melanjutkan.
           </p>
           <Link
             to="/login"
@@ -65,7 +81,7 @@ export default function Register() {
           </Link>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -82,7 +98,9 @@ export default function Register() {
         </div>
 
         <div className="mb-6">
-          <h2 className="text-2xl font-semibold text-gray-900 text-center">Daftar</h2>
+          <h2 className="text-2xl font-semibold text-gray-900 text-center">
+            Daftar
+          </h2>
           <p className="text-gray-600 text-center mt-1">Buat akun baru Anda</p>
         </div>
 
@@ -104,7 +122,9 @@ export default function Register() {
                 type="text"
                 required
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 placeholder="John Doe"
               />
@@ -121,7 +141,9 @@ export default function Register() {
                 type="email"
                 required
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 placeholder="nama@email.com"
               />
@@ -138,7 +160,9 @@ export default function Register() {
                 type="tel"
                 required
                 value={formData.waNumber}
-                onChange={(e) => setFormData({ ...formData, waNumber: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, waNumber: e.target.value })
+                }
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 placeholder="08123456789"
               />
@@ -155,7 +179,9 @@ export default function Register() {
                 type="password"
                 required
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 placeholder="••••••••"
               />
@@ -172,7 +198,9 @@ export default function Register() {
                 type="password"
                 required
                 value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, confirmPassword: e.target.value })
+                }
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 placeholder="••••••••"
               />
@@ -184,19 +212,22 @@ export default function Register() {
             disabled={isLoading}
             className="w-full bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Memproses...' : 'Daftar'}
+            {isLoading ? "Memproses..." : "Daftar"}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            Sudah punya akun?{' '}
-            <Link to="/login" className="text-blue-900 hover:text-blue-800 font-medium">
+            Sudah punya akun?{" "}
+            <Link
+              to="/login"
+              className="text-blue-900 hover:text-blue-800 font-medium"
+            >
               Masuk di sini
             </Link>
           </p>
         </div>
       </div>
     </div>
-  )
+  );
 }

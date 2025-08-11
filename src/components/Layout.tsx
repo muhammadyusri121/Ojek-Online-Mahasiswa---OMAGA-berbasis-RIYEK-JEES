@@ -88,7 +88,7 @@ export default function Layout({ children }: LayoutProps) {
                     className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                       isActive
                         ? "bg-blue-900 text-white"
-                        : // Menggunakan warna hijau dari desain baru
+                        :
                           "text-gray-700 hover:bg-green-50 hover:text-green-800"
                     }`}
                   >

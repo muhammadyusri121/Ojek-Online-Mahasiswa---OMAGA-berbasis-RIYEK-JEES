@@ -1,32 +1,32 @@
-import React, { useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
-import { Car, Mail, Lock, AlertCircle } from 'lucide-react'
+import React, { useState } from "react";
+import { Link, Navigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { Car, Mail, Lock, AlertCircle } from "lucide-react";
 
 export default function Login() {
-  const { user, signIn, loading } = useAuth()
-  const [formData, setFormData] = useState({ email: '', password: '' })
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const { user, signIn, loading } = useAuth();
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   if (user && !loading) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
 
-    const result = await signIn(formData.email, formData.password)
-    
+    const result = await signIn(formData.email, formData.password);
+
     // PERBAIKAN: Tampilkan pesan error yang sebenarnya dari Supabase
     if (result.error) {
-      setError(result.error)
+      setError(result.error);
     }
-    
-    setIsLoading(false)
-  }
+
+    setIsLoading(false);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-orange-500 flex items-center justify-center p-4">
@@ -42,7 +42,9 @@ export default function Login() {
         </div>
 
         <div className="mb-6">
-          <h2 className="text-2xl font-semibold text-gray-900 text-center">Masuk</h2>
+          <h2 className="text-2xl font-semibold text-gray-900 text-center">
+            Masuk
+          </h2>
           <p className="text-gray-600 text-center mt-1">Masuk ke akun Anda</p>
         </div>
 
@@ -64,7 +66,9 @@ export default function Login() {
                 type="email"
                 required
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 placeholder="nama@email.com"
               />
@@ -81,7 +85,9 @@ export default function Login() {
                 type="password"
                 required
                 value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, password: e.target.value })
+                }
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 placeholder="••••••••"
               />
@@ -93,19 +99,22 @@ export default function Login() {
             disabled={isLoading}
             className="w-full bg-gradient-to-r from-blue-900 to-blue-800 hover:from-blue-800 hover:to-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Memproses...' : 'Masuk'}
+            {isLoading ? "Memproses..." : "Masuk"}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            Belum punya akun?{' '}
-            <Link to="/register" className="text-blue-900 hover:text-blue-800 font-medium">
+            Belum punya akun?{" "}
+            <Link
+              to="/register"
+              className="text-blue-900 hover:text-blue-800 font-medium"
+            >
               Daftar sekarang
             </Link>
           </p>
         </div>
       </div>
     </div>
-  )
+  );
 }
