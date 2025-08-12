@@ -1,100 +1,114 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || ''
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || ''
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// Enhanced Database types
+// --- Tipe Data Database ---
+
 export interface User {
-  id: string
-  email?: string
-  name?: string
-  wa_number: string
-  role: 'admin' | 'driver' | 'pengguna'
-  profile_picture_url?: string
-  created_at: string
-  updated_at: string
+  id: string;
+  email?: string;
+  name?: string;
+  wa_number: string;
+  role: "admin" | "driver" | "pengguna";
+  profile_picture_url?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Driver {
-  id: string
-  user_id: string
-  status: 'online' | 'offline'
-  created_at: string
-  updated_at: string
-  // PERBAIKAN FINAL: Nama properti diubah menjadi 'user' (tunggal) dan opsional
-  user?: User 
+  id: string;
+  user_id: string;
+  status: "online" | "offline";
+  created_at: string;
+  updated_at: string;
+  user?: User;
 }
 
 export interface Order {
-  id: string
-  user_id: string
-  driver_id?: string
-  type: 'delivery' | 'ride'
-  pickup_addr: string
-  dest_addr: string
-  notes?: string
-  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled'
-  created_at: string
-  completed_at?: string
-  updated_at: string
-  user?: User
-  driver?: Driver
+  id: string;
+  user_id: string;
+  driver_id?: string;
+  type: "delivery" | "ride";
+  pickup_addr: string;
+  dest_addr: string;
+  notes?: string;
+  status: "pending" | "accepted" | "in_progress" | "completed" | "cancelled";
+  created_at: string;
+  completed_at?: string;
+  updated_at: string;
+  user?: User;
+  driver?: Driver;
+  reports?: Report[]; // Penambahan untuk fitur Laporan
 }
 
 export interface OrderImage {
-  id: string
-  order_id: string
-  filename: string
-  url: string
-  uploaded_by: string
-  created_at: string
+  id: string;
+  order_id: string;
+  filename: string;
+  url: string;
+  uploaded_by: string;
+  created_at: string;
 }
 
-// Helper functions for file upload
+// Penambahan interface untuk fitur Laporan
+export interface Report {
+  id: string;
+  order_id: string;
+  user_id: string;
+  report_message: string;
+  is_anonymous: boolean;
+  created_at: string;
+}
+
+// --- Fungsi Helper untuk File ---
+
 export const uploadProfilePicture = async (userId: string, file: File) => {
-  const fileExt = file.name.split('.').pop()
-  const fileName = `${userId}/profile.${fileExt}`
-  
-  const { data, error } = await supabase.storage
-    .from('profile-pictures')
-    .upload(fileName, file, { upsert: true })
+  const fileExt = file.name.split(".").pop();
+  const fileName = `${userId}/profile.${fileExt}`;
 
-  if (error) throw error
+  const { error } = await supabase.storage
+    .from("profile-pictures")
+    .upload(fileName, file, { upsert: true });
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('profile-pictures')
-    .getPublicUrl(fileName)
+  if (error) throw error;
 
-  return publicUrl
-}
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("profile-pictures").getPublicUrl(fileName);
 
-export const uploadOrderImage = async (orderId: string, file: File, userId: string) => {
-  const fileExt = file.name.split('.').pop()
-  const fileName = `${orderId}/${Date.now()}.${fileExt}`
-  
-  const { data, error } = await supabase.storage
-    .from('order-images')
-    .upload(fileName, file)
+  return publicUrl;
+};
 
-  if (error) throw error
+export const uploadOrderImage = async (
+  orderId: string,
+  file: File,
+  userId: string
+) => {
+  const fileExt = file.name.split(".").pop();
+  const fileName = `${orderId}/${Date.now()}.${fileExt}`;
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('order-images')
-    .getPublicUrl(fileName)
+  const { error } = await supabase.storage
+    .from("order-images")
+    .upload(fileName, file);
 
-  // Save to database
-  const { error: dbError } = await supabase
-    .from('order_images')
-    .insert({
-      order_id: orderId,
-      filename: file.name,
-      url: publicUrl,
-      uploaded_by: userId
-    })
+  if (error) throw error;
 
-  if (dbError) throw dbError
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("order-images").getPublicUrl(fileName);
 
-  return publicUrl
-}
+  // Simpan ke database
+  const { error: dbError } = await supabase.from("order_images").insert({
+    order_id: orderId,
+    filename: file.name,
+    url: publicUrl,
+    uploaded_by: userId,
+  });
+
+  if (dbError) throw dbError;
+
+  return publicUrl;
+};

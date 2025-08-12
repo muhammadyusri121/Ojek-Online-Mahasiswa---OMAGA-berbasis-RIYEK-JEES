@@ -274,7 +274,7 @@ export default function Layout({ children }: LayoutProps) {
             <div className="text-sm text-gray-500 flex flex-col sm:flex-row items-center justify-center gap-1">
               {" "}
               <span>
-                © {new Date().getFullYear()} Ojek Mahasiswa (OMAGA) v1.0.0 Beta
+                © {new Date().getFullYear()} Ojek Mahasiswa (OMAGA) v1.5 Beta
                 testing
               </span>
               <span className="hidden sm:inline">|</span>

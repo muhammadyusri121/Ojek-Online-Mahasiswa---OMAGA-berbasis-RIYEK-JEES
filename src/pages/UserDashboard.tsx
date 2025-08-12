@@ -2,22 +2,20 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { supabase, type Driver, type Order, type User } from "../lib/supabase";
+import { supabase,  type Order, type User } from "../lib/supabase";
 import {
   Car,
   Package,
-  MapPin,
-  Clock,
-  User as UserIcon,
-  Plus,
+  User as Plus,
   History,
   MessageCircle,
   ArrowRight,
-  ChevronRight,
   Bike,
   ShoppingBag,
   Info,
+  MessageSquare, // <-- Ditambahkan
 } from "lucide-react";
+import ReportModal from "../components/ReportModal"; // <-- Ditambahkan
 
 // Ilustrasi Kustom (dalam format komponen React)
 const HeroIllustration = () => (
@@ -286,6 +284,8 @@ export default function UserDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [selectedOrderForReport, setSelectedOrderForReport] =
+    useState<Order | null>(null); // <-- Ditambahkan
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -295,7 +295,8 @@ export default function UserDashboard() {
         supabase.rpc("get_online_drivers"),
         supabase
           .from("orders")
-          .select(`*, driver:drivers(*, user:users(*))`)
+          // === PENYESUAIAN DI SINI ===
+          .select(`*, driver:drivers(*, user:users(*)), reports(*)`)
           .eq("user_id", user.id)
           .order("created_at", { ascending: false }),
       ]);
@@ -313,6 +314,12 @@ export default function UserDashboard() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // <-- Fungsi baru ditambahkan
+  const handleReportSuccess = () => {
+    setSelectedOrderForReport(null); // Tutup modal
+    fetchData(); // Muat ulang data untuk memperbarui UI
+  };
 
   const getStatusColor = (status: string) =>
     ({
@@ -392,7 +399,6 @@ export default function UserDashboard() {
                         className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors"
                       >
                         <div className="flex items-center space-x-4">
-                          {/* === PENYESUAIAN DI SINI === */}
                           {driver.user?.profile_picture_url ? (
                             <img
                               src={driver.user.profile_picture_url}
@@ -507,6 +513,20 @@ export default function UserDashboard() {
                             </p>
                           )}
                         </div>
+
+                        {/* === PENYESUAIAN DI SINI: Tombol Laporan === */}
+                        {order.status === "completed" &&
+                          (!order.reports || order.reports.length === 0) && (
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                              <button
+                                onClick={() => setSelectedOrderForReport(order)}
+                                className="w-full flex items-center justify-center px-4 py-2 bg-yellow-100 text-yellow-800 rounded-lg hover:bg-yellow-200 transition-colors text-sm font-semibold"
+                              >
+                                <MessageSquare size={16} className="mr-2" />
+                                Buat Laporan
+                              </button>
+                            </div>
+                          )}
                       </div>
                     ))}
                   </div>
@@ -608,6 +628,15 @@ export default function UserDashboard() {
           }}
           userId={user?.id || ""}
           drivers={drivers}
+        />
+      )}
+
+      {/* === PENYESUAIAN DI SINI: Modal untuk Laporan === */}
+      {selectedOrderForReport && (
+        <ReportModal
+          order={selectedOrderForReport}
+          onClose={() => setSelectedOrderForReport(null)}
+          onSuccess={handleReportSuccess}
         />
       )}
     </div>

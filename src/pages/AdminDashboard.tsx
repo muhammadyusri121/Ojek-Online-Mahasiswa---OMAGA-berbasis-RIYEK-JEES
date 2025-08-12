@@ -1,7 +1,7 @@
-// Ganti isi file src/pages/AdminDashboard.tsx dengan kode ini
+// src/pages/AdminDashboard.tsx
 
-import{ useEffect, useState, useCallback } from "react";
-import { supabase, type User, type Order } from "../lib/supabase";
+import { useEffect, useState, useCallback } from "react";
+import { supabase, type User, type Order, type Report } from "../lib/supabase";
 import {
   Users,
   Car,
@@ -12,6 +12,8 @@ import {
   BarChart3,
   Clock,
   CheckCircle,
+  ShieldAlert, // <-- Ditambahkan
+  CheckSquare, // <-- Ditambahkan
 } from "lucide-react";
 
 // Tipe untuk data statistik admin
@@ -24,12 +26,20 @@ interface AdminDashboardStats {
   pending_orders: number;
 }
 
+// Tipe gabungan untuk Laporan dengan detail tambahan
+interface CombinedReport extends Report {
+  status: 'baru' | 'selesai';
+  user: { name: string | null } | null;
+  order: { pickup_addr: string; dest_addr: string } | null;
+}
+
 export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [reports, setReports] = useState<CombinedReport[]>([]); // <-- State baru untuk laporan
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"overview" | "users" | "orders">(
+  const [activeTab, setActiveTab] = useState<"overview" | "users" | "orders" | "reports">(
     "overview"
   );
 
@@ -43,7 +53,7 @@ export default function AdminDashboard() {
       if (error) throw error;
       setUsers(data || []);
     } catch (e) {
-      console.error(e);
+      console.error("Gagal mengambil data pengguna:", e);
     } finally {
       setLoading(false);
     }
@@ -59,11 +69,41 @@ export default function AdminDashboard() {
       if (error) throw error;
       setOrders(data || []);
     } catch (e) {
-      console.error(e);
+      console.error("Gagal mengambil data pesanan:", e);
     } finally {
       setLoading(false);
     }
   }, []);
+
+  // <-- Fungsi baru untuk mengambil data laporan
+  const fetchReports = useCallback(async () => {
+    setLoading(true);
+    try {
+        const { data, error } = await supabase
+            .from('reports')
+            .select(`
+                *,
+                user:users(name),
+                order:orders(pickup_addr, dest_addr)
+            `)
+            .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+
+        // Pastikan setiap laporan memiliki status
+        const formattedData = (data || []).map(r => ({
+            ...r,
+            status: r.status || 'baru' 
+        })) as CombinedReport[];
+
+        setReports(formattedData);
+    } catch (e) {
+        console.error("Gagal mengambil data laporan:", e);
+    } finally {
+        setLoading(false);
+    }
+  }, []);
+
 
   const fetchOverview = useCallback(async () => {
     setLoading(true);
@@ -80,9 +120,9 @@ export default function AdminDashboard() {
         .order("created_at", { ascending: false })
         .limit(5);
       if (ordersError) throw ordersError;
-      setOrders((recentOrders as Order[]) || []); // Cast as Order[]
+      setOrders((recentOrders as Order[]) || []);
     } catch (e) {
-      console.error(e);
+      console.error("Gagal mengambil data overview:", e);
     } finally {
       setLoading(false);
     }
@@ -92,11 +132,36 @@ export default function AdminDashboard() {
     if (activeTab === "overview") fetchOverview();
     else if (activeTab === "users") fetchUsers();
     else if (activeTab === "orders") fetchOrders();
-  }, [activeTab, fetchOverview, fetchUsers, fetchOrders]);
+    else if (activeTab === "reports") fetchReports(); // <-- Panggil fetchReports
+  }, [activeTab, fetchOverview, fetchUsers, fetchOrders, fetchReports]);
 
   const refreshCurrentTab = () => {
     if (activeTab === "users") fetchUsers();
+    else if (activeTab === "orders") fetchOrders();
+    else if (activeTab === "reports") fetchReports();
     else fetchOverview();
+  };
+  
+  // <-- Fungsi baru untuk menandai laporan selesai
+  const handleMarkReportAsResolved = async (reportId: string) => {
+    try {
+        const { error } = await supabase
+            .from('reports')
+            .update({ status: 'selesai' })
+            .eq('id', reportId);
+
+        if (error) throw error;
+      
+        // Memperbarui tampilan UI secara langsung tanpa perlu fetch ulang
+        setReports(currentReports => 
+            currentReports.map(report => 
+                report.id === reportId ? { ...report, status: 'selesai' } : report
+            )
+        );
+    } catch (error) {
+        console.error("Gagal memperbarui status laporan:", error);
+        alert("Gagal memperbarui status laporan.");
+    }
   };
 
   async function promoteToDriver(userId: string) {
@@ -117,7 +182,6 @@ export default function AdminDashboard() {
     else refreshCurrentTab();
   }
 
-  // ... (Sisa kode komponen seperti exportData, getStatusColor, dan JSX return tetap sama)
   const exportData = () => {
     const csvContent =
       "data:text/csv;charset=utf-8," +
@@ -144,8 +208,6 @@ export default function AdminDashboard() {
     document.body.removeChild(link);
   };
 
-  // Sisa kode komponen (return statement) tetap sama, tidak perlu diubah.
-  // ... (Salin sisa kode dari file asli Anda mulai dari `const getStatusColor = ...` hingga akhir)
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
@@ -228,6 +290,7 @@ export default function AdminDashboard() {
               { id: "overview", name: "Overview", icon: BarChart3 },
               { id: "users", name: "Pengguna", icon: Users },
               { id: "orders", name: "Pesanan", icon: Package },
+              { id: "reports", name: "Laporan", icon: ShieldAlert }, // <-- Tab Laporan
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -566,6 +629,89 @@ export default function AdminDashboard() {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Konten untuk Tab Laporan */}
+      {activeTab === 'reports' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Laporan Masuk dari Pengguna
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Kelola dan tindak lanjuti laporan dari pengguna.
+            </p>
+          </div>
+          <div className="p-6">
+            {reports.length > 0 ? (
+              <div className="space-y-4">
+                {reports.map((report) => (
+                  <div 
+                    key={report.id} 
+                    className={`p-4 border rounded-lg transition-all ${
+                      report.status === 'selesai' 
+                        ? 'border-gray-200 bg-gray-50 opacity-70' 
+                        : 'border-gray-200'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-2 mb-3">
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <p className="font-bold text-gray-800">
+                            {report.is_anonymous ? 
+                              <span className="italic text-gray-500">Pelapor Anonim</span> : 
+                              (report.user?.name || 'Nama Tidak Tersedia')
+                            }
+                          </p>
+                          {/* Badge Status Laporan */}
+                          <span className={`px-2 py-0.5 text-xs font-semibold rounded-full capitalize ${
+                            report.status === 'baru' 
+                              ? 'bg-yellow-100 text-yellow-800' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {report.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(report.created_at).toLocaleString('id-ID', { dateStyle: 'long', timeStyle: 'short' })}
+                        </p>
+                      </div>
+                      <div className="text-left sm:text-right bg-gray-100 p-2 rounded-md">
+                         <p className="text-xs text-gray-600 font-medium">Pesanan Terkait</p>
+                         <p className="text-xs text-gray-500 truncate max-w-xs">
+                           {report.order?.pickup_addr} → {report.order?.dest_addr}
+                         </p>
+                      </div>
+                    </div>
+                    <div className={`mt-2 p-3 border-l-4 rounded-r-md ${
+                        report.status === 'selesai' ? 'border-gray-300' : 'bg-yellow-50 border-yellow-400'
+                    }`}>
+                        <p className="text-gray-800 whitespace-pre-wrap text-sm">{report.report_message}</p>
+                    </div>
+
+                    {/* Tombol Aksi untuk Admin */}
+                    {/* {report.status === 'baru' && (
+                      <div className="mt-4 pt-4 border-t border-gray-200 flex justify-end">
+                        <button 
+                          onClick={() => handleMarkReportAsResolved(report.id)}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                        >
+                          <CheckSquare size={16} />
+                          Tandai Selesai
+                        </button>
+                      </div>
+                    )} */}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-gray-500">
+                <ShieldAlert className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+                <p className="font-semibold">Belum ada laporan yang masuk.</p>
+              </div>
+            )}
           </div>
         </div>
       )}
